@@ -2,11 +2,12 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"os"
+	"strconv"
 )
 
+/*
 func main() {
 
 	var host, err = getHostFromArgs()
@@ -17,6 +18,7 @@ func main() {
 		fmt.Println("Error: ", err)
 	}
 }
+*/
 
 func connectToNetwork(host string) {
 	strEcho := "{\"id\": 1, \"method\": \"mining.subscribe\", \"params\": []}\n"
@@ -53,6 +55,15 @@ func connectToNetwork(host string) {
 	println("reply from server=", string(reply))
 
 	defer conn.Close()
+}
+
+func runStratumTCPCommunicationJob(host string, port int) {
+	connectToNetwork(getAddress(host, port))
+}
+
+func getAddress(host string, port int) string {
+	stringPort := strconv.Itoa(port)
+	return host + ":" + stringPort
 }
 
 func getHostFromArgs() (string, error) {
