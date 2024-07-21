@@ -5,6 +5,8 @@ import (
 	"net"
 	"os"
 	"strconv"
+    "fmt"
+//    "time"
 )
 
 /*
@@ -20,8 +22,7 @@ func main() {
 }
 */
 
-func connectToNetwork(host string) {
-	strEcho := "{\"id\": 1, \"method\": \"mining.subscribe\", \"params\": []}\n"
+func connectToNetwork(host string, username string, password string) {
 	tcpAddr, err := net.ResolveTCPAddr("tcp", host)
 	println("tcpAddr: ", tcpAddr)
 	if err != nil {
@@ -29,36 +30,55 @@ func connectToNetwork(host string) {
 		os.Exit(1)
 	}
 
-	conn, err := net.DialTCP("tcp", nil, tcpAddr)
+    conn, err := net.DialTCP("tcp", nil, tcpAddr)
 	// conn, err := net.Dial("tcp", host)
 	if err != nil {
 		println("Dial failed:", err.Error())
 		os.Exit(1)
 	}
+    println("Sending mining.subscribe")
+	message := "{\"id\": 1, \"method\": \"mining.subscribe\", \"params\": []}\n"
+    sendMessage(message, conn)
+    println("Sending mining.authorize")
+    message = fmt.Sprintf("{\"params\": [\"%s\", \"%s\"], \"id\": 1, \"method\": \"mining.authorize\"}\n", username, password)
+    go sendMessage(message, conn)
+    println("Starting reading responses")
+    continousProcessResponses(conn)
 
-	_, err = conn.Write([]byte(strEcho))
+    defer conn.Close()
+}
+
+func sendMessage(message string, conn *(net.TCPConn)) {
+    _, err := conn.Write([]byte(message))
 	if err != nil {
 		println("Write to server failed:", err.Error())
 		os.Exit(1)
 	}
 
-	println("write to server = ", strEcho)
+	println("write to server = ", message)	
+}
 
-	reply := make([]byte, 1024)
+func getResponse(conn *(net.TCPConn)) {
+    reply := make([]byte, 10240)
 
-	_, err = conn.Read(reply)
+    _, err := conn.Read(reply)
 	if err != nil {
-		println("Write to server failed:", err.Error())
+		println("Response from server failed:", err.Error())
 		os.Exit(1)
 	}
 
 	println("reply from server=", string(reply))
-
-	defer conn.Close()
 }
 
-func runStratumTCPCommunicationJob(host string, port int) {
-	connectToNetwork(getAddress(host, port))
+func continousProcessResponses(conn *(net.TCPConn)) {
+    for true {
+        println("Getting Response")
+        getResponse(conn)
+    }
+}
+
+func runStratumTCPCommunicationJob(host string, port int, username string, password string) {
+	connectToNetwork(getAddress(host, port), username, password)
 }
 
 func getAddress(host string, port int) string {
